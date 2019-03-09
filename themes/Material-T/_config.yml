@@ -105,12 +105,12 @@ about:
   # available: 0 - 100
   banner_img_height: 60
   avatar: /img/avatar.jpg 
-  name: myname
-  job: myjob
-  introduce: my info
+  name: EmiyaGm
+  job: web developer
+  introduce: Hello World
   extension: 
   icons: 
-    github: https://github.com
+    github: https://github.com/EmiyaGm
     twitter: https://twitter.com
 
 
@@ -118,4 +118,4 @@ about:
 # 底部信息
 # Footer
 #---------------------------
-footer: <b>多喝热水</b>
+footer: <b>EmiyaGm</b>
