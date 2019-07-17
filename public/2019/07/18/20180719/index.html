@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.8.0">
+    <meta charset="utf-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, shrink-to-fit=no" name="viewport">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="description" content="Only a blog">
+    <meta name="author" content="Emiyagm">
+    <meta name="keywords" content="Blog,博客,Emiyagm">
+    <title>关于react组件生命周期的妙用 ~ Emiyagm&#39;s blog</title>
+    <link rel="stylesheet" href="/css/Material_Icons.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/main.css">
+    
+        <link rel="stylesheet" href="/css/post.css">
+        
+            <link rel="stylesheet" href="/css/Prettify/tomorrow-night-eighties.min.css">
+        
+    
+</head>
+
+<body class=" sidebar-collapse">
+<nav class="navbar navbar-transparent navbar-color-on-scroll fixed-top navbar-expand-lg" color-on-scroll="100" id="sectionsNav">
+    <div class="container">
+        <div class="navbar-translate">
+            <a class="navbar-brand" href="/">
+                Emiyagm&#39;s blog</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ml-auto">
+                    
+                        
+                            <li class="nav-item">
+                                <a class="nav-link" href="/archives/">
+                                    archives
+                                </a>
+                            </li>
+                        
+                            <li class="nav-item">
+                                <a class="nav-link" href="/about/">
+                                    about
+                                </a>
+                            </li>
+                        
+                    
+                    
+                        
+                            <li class="nav-item">
+                                <a class="nav-link" rel="tooltip" title data-placement="bottom" href="https://github.com/" target="_blank" data-original-title="See me here">
+                                    <i class="fa fa-github"></i>
+                                </a>
+                            </li>
+                        
+                            <li class="nav-item">
+                                <a class="nav-link" rel="tooltip" title data-placement="bottom" href="https://twitter.com/" target="_blank" data-original-title="See me here">
+                                    <i class="fa fa-twitter"></i>
+                                </a>
+                            </li>
+                        
+                    
+                </ul>
+            </div>
+    </div>
+</nav>
+    
+  <div class="page-header header-filter" data-parallax="false" style="background-image: url('/img/post-banner.jpg'); height: 70vh;">
+    
+      <div class="container">
+        <h1 class="title text-center post_title">关于react组件生命周期的妙用</h1>
+        <p class="text-center"><b>Thursday, July 18th 2019, 1:35 am</b></p>
+      </div>
+    
+  </div>
+
+  
+  
+  
+    <div class="row" style="margin: 0 0 0; z-index: 999;">
+  <div class="col-md-8 offset-md-1">
+    <div class="main main-raised">
+      <div class="container">
+        <div class="section">
+          <div class="post_content">
+              <p>今天早上处理了一个bug，主要情况是这样的：<br>我们通过markettable这个组件的一个state叫做activekey来控制该组件内的tab的选中项，tab的内容是数据展示的表格，并且每一条数据都可以收藏和取消收藏，最后有一个收藏的tab项来查看收藏的数据。<br>需求是，当该用户的收藏中有数据，那么在进入该页面的时候，tab默认切换到收藏项上，如果收藏没有数据，那么默认切换到第一个tab项。<br>一开始我们的逻辑是这样的：<br>给这个组件设置一个state叫做activekey，初始值是一个空字符串，用来作为tab组件的activekey属性的取值，控制tab的当前选择项，每一次change都会触发tab的onchange监听，然后会给这个activekey赋当前选中的tab项的名称这个值，初始加载的时候，该tab的activekey属性取值会先进行判断state activekey有没有值，有的话就用state activekey作为tab的activekey属性的值，如果没有，就会去判断收藏栏目里面有没有值，有值就会让tab切换到收藏栏，没有就会让tab切换到第一栏。</p>
+<pre><code class="javascript">export default class MarketTable extends Component {
+  constructor() {
+    super();
+    this.state = {
+      activeKey: &#39;&#39;
+    };
+  }
+
+  .....
+
+  &lt;Tabs
+       activeKey={this.state.activeKey || 
+                           (Object,keys(favoriteLists).length &gt; 0 ? &#39;收藏&#39; : markerTabList[0].name)}
+       type=&quot;card&quot;
+       onChange={activeKey =&gt; {
+           this.setState({
+               activeKey
+           });
+      }}
+   &gt;
+</code></pre>
+<p>然后测试报了一个十分奇妙的bug，就是当我们第一次进入这个页面且该账号收藏中没有数据，那么该tab会默认切换到第一栏，这个没有问题。但是当我们在首次进入没有收藏数据的页面中后，点击一条数据的收藏，那么就会立刻将tab切换到收藏栏。<br>经过分析发现，是因为初始化渲染结束之后，用来控制activekey的state activekey为空值，但是tab却已经切换到第一项，当我们点击收藏之后，由于state activekey为空，所以我们会进行如下判断</p>
+<pre><code class="javascript">Object,keys(favoriteLists).length &gt; 0 ? &#39;收藏&#39; : markerTabList[0].name)
+</code></pre>
+<p>得到的结果是收藏，所以tab就会切换到收藏栏目。<br>这个问题本质上是因为state activekey和tab的activekey属性在第一次加载完成之后没有保持一致。<br>经过思考分析，解决方案如下：<br>采用react组件的生命周期函数componentWillReceiveProps<br>我们知道componentWillReceiveProps 在组件接收到一个新的 prop (更新后)时被调用。这个方法在初始化render时不会被调用。<br>解决的思路是这样的，因为初始化的时候，由于要请求接口更新收藏的数据，所以我们会改变一次props然后触发componentWillReceiveProps这个方法，并且会改变favoriteList这个props，那么在这个时候我们只要去改变一次state activekey的值，做到与当前tab上的activekey的属性对应一致即可。<br>并且由于每一次的收藏操作都会触发componentWillReceiveProps该方法，所有我们需要进行一些判断加以限制，并且把原先写在tab上的判断挪入当中，统一管理。</p>
+<pre><code class="javascript">componentWillReceiveProps(nextProps) {
+    if (nextProps.favoriteList !== this.props.favoriteList) {
+      this.setState({
+        activeKey:
+          this.state.activeKey ||
+          (Object.keys(nextProps.favoriteList).length &gt; 0 ? &#39;自选&#39; : &#39;CNYT&#39;)
+      });
+    }
+  }
+
+.....
+
+&lt;Tabs
+    activeKey={this.state.activeKey}
+    type=&quot;card&quot;
+    onChange={activeKey =&gt; {
+         this.setState({
+             activeKey
+          });
+    }}
+&gt;
+</code></pre>
+<p><img src="https://images2015.cnblogs.com/blog/588767/201612/588767-20161205190022429-1074951616.jpg" alt="avatar"></p>
+<p>写于 2018-07-19</p>
+
+          </div>
+          <br><br>
+          <div>
+              <p>
+                      
+              </p>
+          </div>
+        </div>
+      </div>  
+    </div>
+  </div>
+  <!-- TOC -->
+  
+  <div id="toc">
+    <p class="toc-title"><i class="material-icons" style="vertical-align:middle">toc</i>Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+</div>
+
+
+<br>
+<!-- Comments -->
+<div class="comments" id="comments">
+
+    
+    <div class="disqus" style="width:100%">
+    <div id="disqus_thread"></div>
+    <script>               
+        var disqus_shortname = '';
+        var disqus_config = function () {
+            this.page.url = 'http://http://emiyagm.club/2019/07/18/20180719/'; 
+            this.page.identifier = '/2019/07/18/20180719/';
+        };
+        (function() { 
+            var d = document, s = d.createElement('script');
+            s.type = 'text/javascript';
+            s.src = '//'+disqus_shortname+'.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>                                
+</div>
+
+</div>
+  
+
+<footer class="footer footer-default">
+        <div class="container">
+          <div class="float-left" style="padding: 15px 0;">
+              <b>EmiyaGm</b>
+          </div>
+          <div class="copyright float-right">
+            &copy;
+            <script>
+              document.write(new Date().getFullYear())
+            </script>&nbsp;<a href="https://hexo.io/zh-cn/" target="_blank">HEXO</a>&nbsp;<i class="material-icons">favorite_border</i>
+            <a href="https://github.com/invom/Material-T" target="_blank">Material-T</a>
+          </div>
+        </div>
+</footer>
+      <!--   Core JS Files   -->
+      <script src="/js/core/jquery.min.js?v=3.2.1"></script>
+      <script src="/js/main.js"></script>
+      <script src="/js/core/popper.min.js"></script>
+      <script src="/js/core/bootstrap-material-design.min.js"></script>
+      <script src="/js/plugins/moment.min.js"></script>
+      <!-- Control Center for Material Kit: parallax effects, scripts for the example pages etc -->
+      <script src="/js/material-kit.min.js?v=2.0.5"></script>
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+        <script src="/js/post.js"></script>
+        <script src="/js/plugins/prettify.js"></script>
+        <script>
+            $(document).ready(function(){
+                $('pre').addClass('prettyprint linenums');
+                prettyPrint();
+            })
+        </script>
+      
+</body>
+</html>
